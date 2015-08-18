@@ -1,0 +1,11 @@
+---
+# re-fwd default variables
+refwd_hostname: "re-fwd.com"
+refwd_mail_server_hostname: "mail.{{ refwd_hostname }}"
+
+refwd_symfony_deploy_dir: /var/www/refwd
+
+refwd_node_chat_app_dir: "{{ refwd_symfony_deploy_dir }}/socket"
+refwd_node_chat_app_js_file: "{{ refwd_symfony_deploy_dir }}/socket/server.js"
+
+refwd_mail_parser_php: "{{ refwd_symfony_deploy_dir }}/parser/parser_basic.php"

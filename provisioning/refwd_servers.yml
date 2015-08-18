@@ -1,0 +1,21 @@
+---
+- hosts: group_refwd
+  sudo: yes
+  sudo_user: root
+  vars_files:
+    - "vars/all_secret.yml"
+    - "vars/{{ inventory }}_secret.yml"
+  roles:
+    - { role: common }
+    - { role: geerlingguy.git }
+    - { role: refwd, refwd_install_stage: prebuild }
+    - { role: geerlingguy.php }
+    - { role: geerlingguy.php-pear }
+    - { role: geerlingguy.php-pecl }
+    - { role: geerlingguy.mysql }
+    - { role: geerlingguy.php-mysql }
+    - { role: geerlingguy.composer }
+    - { role: geerlingguy.apache }
+    - { role: geerlingguy.nginx }
+    - { role: geerlingguy.nodejs }
+    - { role: refwd, refwd_install_stage: build }

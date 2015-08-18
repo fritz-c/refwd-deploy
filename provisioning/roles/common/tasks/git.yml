@@ -1,0 +1,10 @@
+---
+# git related tasks
+
+- name: install ssh key
+  copy:
+    content: "{{ all_secret.git_repo_ssh_key }}"
+    dest: /root/.ssh/git_repo_ssh_key
+    mode: 0600
+    owner: root
+    group: root

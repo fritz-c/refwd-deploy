@@ -1,0 +1,6 @@
+---
+# re-fwd deployment tasks
+
+# Include task file appropriate to the current install stage
+# refwd_install_stage = "prebuild|build"
+- include: "{{ refwd_install_stage }}.yml"

@@ -1,0 +1,87 @@
+---
+# re-fwd mail server tasks (postfix install, node.js startup)
+
+- name: create mail parser user
+  user: name=parser comment="Refwd Mail Parser" system=yes
+
+- name: create spamfilter user
+  user: name=spamfilter shell=/bin/false home=/usr/local/spamassassin
+
+- name: Add hostname to /etc/hosts
+  lineinfile: dest=/etc/hosts regexp="^127.0.0.1 " line="127.0.0.1 localhost {{ refwd_hostname }}"
+
+- name: Add add@re-fwd.com alias to /etc/aliases
+  lineinfile:
+    dest:   "/etc/aliases"
+    regexp: "^add: "
+    line:   "add: root"
+  notify: reload aliases
+
+- name: Ensure postfix is installed (RedHat).
+  yum: pkg={{ item }} state=installed
+  with_items:
+    - postfix
+    - spamassassin
+    - dovecot
+  when: ansible_os_family == 'RedHat'
+
+- name: Ensure postfix is installed (Debian).
+  apt: pkg={{ item }} state=installed
+  with_items:
+    - postfix
+    - spamassassin
+    - "dovecot-core"
+    - "dovecot-imapd"
+    - "dovecot-pop3d"
+    - "sasl2-bin"
+  when: ansible_os_family == 'Debian'
+
+- name: Activate saslauthd
+  lineinfile: dest=/etc/default/saslauthd regexp="^START=" line="START=yes"
+  notify: restart saslauthd
+
+- name: "Install postfix config files | pt. 1 (bounce.cf, redirect.regexp)"
+  copy: src=bounce.cf dest=/etc/postfix/bounce.cf owner=root group=root mode=0644
+  notify: restart postfix
+
+- name: "Install postfix config files | pt. 2 (main.cf, master.cf)"
+  template: src={{ item }}.j2 dest=/etc/postfix/{{ item }} owner=root group=root mode=0644
+  with_items:
+    - main.cf
+    - master.cf
+    - redirect.regexp
+  notify: restart postfix
+
+- name: Create mail server ssl directory
+  file: path=/etc/postfix/ssl state=directory owner=root group=root mode=0700
+
+- name: "Install postfix config files | pt. 3 (ssl certs and keys)"
+  copy: content="{{ refwd_secret.smtpd_tls_key_file }}"  dest=/etc/postfix/ssl/smtpd.key  mode=0600 owner=root group=root
+  notify: restart postfix
+- copy: content="{{ refwd_secret.smtpd_tls_cert_file }}" dest=/etc/postfix/ssl/smtpd.crt  mode=0600 owner=root group=root
+  notify: restart postfix
+- copy: content="{{ refwd_secret.smtpd_tls_CAfile }}"    dest=/etc/postfix/ssl/cacert.pem mode=0600 owner=root group=root
+  notify: restart postfix
+
+- name: "Install spamassassin config files"
+  copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root mode=0644
+  with_items:
+    - { src: "local.cf",     dest: "/etc/mail/spamassassin/local.cf" }
+    - { src: "spamassassin", dest: "/etc/default/spamassassin" }
+
+- name: "Install dovecot config files"
+  copy: src=dovecot.conf dest=/etc/dovecot/dovecot.conf owner=root group=root mode=0644
+  notify: restart dovecot
+
+- name: Copy mail parser from the refwd repo
+  command: creates=/etc/postfix/parser.php cp {{ refwd_symfony_deploy_dir }}/parser/parser_basic.php /etc/postfix/parser.php
+
+- name: Fix mail parser permissions
+  file: path=/etc/postfix/parser.php owner=parser group=root mode=0600
+
+- name: "Start up mail services, and set them to be started on boot."
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - postfix
+    - saslauthd
+    - dovecot

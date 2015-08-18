@@ -1,0 +1,64 @@
+---
+# re-fwd build tasks (composer install, node.js startup)
+
+- name: Install imagick
+  apt: name=php5-imagick state=present
+  when: ansible_os_family == "Debian"
+  notify: restart apache
+
+- name: Ensure git's dependencies are installed (RedHat).
+  yum: pkg=php-pecl-imagick state=installed
+  when: ansible_os_family == 'RedHat'
+  notify: restart apache
+
+- name: Place pecl module configuration file
+  copy:
+    content: |
+      extension=mbstring.so
+      extension=mailparse.so
+    dest: "/etc/php5/apache2/conf.d/20-refwd.ini"
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart apache
+
+- name: web | symfony composer install
+  composer: command=install working_dir={{ refwd_symfony_deploy_dir }}
+  environment:
+    SYMFONY__DATABASE__USER:     "{{ refwd_secret.mysql_symfony_user }}"
+    SYMFONY__DATABASE__PASSWORD: "{{ refwd_secret.mysql_symfony_password }}"
+    SYMFONY__DATABASE__NAME:     "{{ refwd_secret.mysql_db_name }}"
+    SYMFONY__S3__KEY:            "{{ refwd_secret.s3_key }}"
+    SYMFONY__S3__SECRET:         "{{ refwd_secret.s3_secret }}"
+    SYMFONY__S3__BUCKET:         "{{ refwd_secret.s3_bucket }}"
+    SYMFONY__S3__ACP_OWNER:      "{{ refwd_secret.s3_acp_owner }}"
+    SYMFONY__DOMAIN__NAME:       "{{ refwd_hostname }}"
+
+- name: web | create database schema
+  command: /usr/bin/php app/console doctrine:schema:update --force --no-interaction
+  args: { chdir: "{{ refwd_symfony_deploy_dir }}" }
+  register: symfony_schema_result
+  changed_when: "symfony_schema_result.stdout.find('Nothing to update') == -1"
+  environment:
+    SYMFONY__DATABASE__USER:     "{{ refwd_secret.mysql_symfony_user }}"
+    SYMFONY__DATABASE__PASSWORD: "{{ refwd_secret.mysql_symfony_password }}"
+    SYMFONY__DATABASE__NAME:     "{{ refwd_secret.mysql_db_name }}"
+    SYMFONY__S3__KEY:            "{{ refwd_secret.s3_key }}"
+    SYMFONY__S3__SECRET:         "{{ refwd_secret.s3_secret }}"
+    SYMFONY__S3__BUCKET:         "{{ refwd_secret.s3_bucket }}"
+    SYMFONY__S3__ACP_OWNER:      "{{ refwd_secret.s3_acp_owner }}"
+    SYMFONY__DOMAIN__NAME:       "{{ refwd_hostname }}"
+
+- name: chat socket | install npm packages for chat app
+  npm:  path={{ refwd_node_chat_app_dir }}
+
+- name: chat socket | Check list of Node.js apps running
+  command: forever list
+  register: forever_list
+  changed_when: false
+
+- name: chat socket | Start chat handler (Node.js / socket.io)
+  command: forever start {{ refwd_node_chat_app_js_file }}
+  when: "forever_list.stdout.find('{{ refwd_node_chat_app_js_file }}') == -1"
+
+- include: mail_server.yml

@@ -1,0 +1,17 @@
+---
+# refwd service handlers
+
+- name: restart dovecot
+  service: name=dovecot state=restarted
+
+- name: restart postfix
+  service: name=postfix state=restarted
+
+- name: restart saslauthd
+  service: name=saslauthd state=restarted
+
+- name: restart apache
+  service: name=apache2 state=restarted
+
+- name: reload aliases
+  command: /usr/bin/newaliases

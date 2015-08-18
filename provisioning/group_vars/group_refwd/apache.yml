@@ -1,0 +1,38 @@
+---
+# Apache
+apache_remove_default_vhost: true
+apache_listen_port: 40080
+apache_listen_port_ssl: 40443
+apache_vhosts:
+  - vhost1:
+    servername:   "{{ refwd_hostname }}"
+    serveralias:  "www.{{ refwd_hostname }} localhost"
+    documentroot: "{{ refwd_symfony_deploy_dir }}/web"
+    extra_parameters: |
+      # Force HTTPS
+      RewriteEngine On
+      RewriteCond %{HTTP:X-Forwarded-Proto} !https
+      RewriteCond %{REQUEST_URI} !^/status.txt$
+      RewriteCond %{REQUEST_URI} !^/_mailparser$
+      RewriteCond %{REQUEST_URI} !^/_socket$
+      RewriteCond %{REQUEST_URI} !^/app.php$
+      RewriteRule (.*) https://%{SERVER_NAME}%{REQUEST_URI} [L,R]
+      # Allow the mail handler to call the mail parser from symfony
+      <Location ~ "/(_socket|_mailparser)">
+          Order deny,allow
+          Deny from all
+          Allow from 127.0.0.1
+      </Location>
+      # Environmental variables for symfony DB access
+      SetEnv SYMFONY__DATABASE__USER     {{ refwd_secret.mysql_symfony_user }}
+      SetEnv SYMFONY__DATABASE__PASSWORD {{ refwd_secret.mysql_symfony_password }}
+      SetEnv SYMFONY__DATABASE__NAME     {{ refwd_secret.mysql_db_name }}
+      SetEnv SYMFONY__S3__KEY            {{ refwd_secret.s3_key }}
+      SetEnv SYMFONY__S3__SECRET         {{ refwd_secret.s3_secret }}
+      SetEnv SYMFONY__S3__BUCKET         {{ refwd_secret.s3_bucket }}
+      SetEnv SYMFONY__S3__ACP_OWNER      {{ refwd_secret.s3_acp_owner }}
+      SetEnv SYMFONY__DOMAIN__NAME       {{ refwd_hostname }}
+
+      # Custom logs
+      ErrorLog /var/log/httpd/refwd_error.log
+      CustomLog /var/log/httpd/refwd_access.log combined

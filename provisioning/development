@@ -1,0 +1,3 @@
+[all:vars]
+inventory=development
+php_enable_apc=false

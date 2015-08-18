@@ -1,0 +1,10 @@
+[group_refwd]
+192.168.33.10 refwd_ssl_cert=refwd-ssl-bundle.crt refwd_ssl_key=refwd-privatekey.pem refwd_hostname=re-fwd.net
+
+[group_foobar]
+127.0.0.1
+127.0.0.2
+
+[all:vars]
+inventory=local
+php_enable_apc=false

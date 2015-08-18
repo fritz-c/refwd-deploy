@@ -1,0 +1,4 @@
+---
+# common tasks
+
+- include: git.yml

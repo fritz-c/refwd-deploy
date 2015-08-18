@@ -1,0 +1,9 @@
+# Options to spamd
+###SPAMDOPTIONS="-d -c -m5 -H"
+
+#From http://www.rosehosting.com/blog/how-to-install-and-integrate-spamassassin-with-postfix-on-a-centos-6-vps/
+ENABLED=1
+SAHOME="/usr/local/spamassassin"
+SPID_DIR="/var/run/spamassassin"
+SUSER="spamfilter"
+SPAMDOPTIONS="-d -c -m5 --username ${SUSER} -H ${SAHOME} -s ${SAHOME}/spamfilter.log"

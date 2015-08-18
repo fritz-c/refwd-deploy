@@ -1,0 +1,39 @@
+---
+# re-fwd prebuild tasks (placing files, creating directories)
+
+- name: copy ssl files for nginx
+  copy: src="{{ item }}" dest="{{ item }}" owner=root group=root mode=0600
+  with_items:
+    - "/etc/ssl/certs/{{ refwd_ssl_cert }}"
+    - "/etc/ssl/private/{{ refwd_ssl_key }}"
+
+- name: check out re-fwd repo from source control
+  git: repo=git@github.com:fritz-c/refwd.git
+    dest="{{ refwd_symfony_deploy_dir }}"
+    version=develop
+    accept_hostkey=True
+    key_file=/root/.ssh/git_repo_ssh_key
+
+- name: Fix mail parser permissions
+  file: path={{ refwd_symfony_deploy_dir }}/{{ item }} state=directory owner="www-data" group="www-data"
+  with_items:
+    - "app/cache"
+    - "app/logs"
+
+- name: Create apache log directory
+  file: path=/var/log/httpd state=directory owner=root group=root mode=0700
+
+- name: add environment variables to .bashrc for symfony work
+  lineinfile:
+    dest:   /root/.bashrc
+    regexp: "^export {{ item.key }}="
+    line:   'export {{ item.key }}="{{ item.value }}"'
+  with_items:
+    - { key: "SYMFONY__DATABASE__USER",     value: "{{ refwd_secret.mysql_symfony_user }}" }
+    - { key: "SYMFONY__DATABASE__PASSWORD", value: "{{ refwd_secret.mysql_symfony_password }}" }
+    - { key: "SYMFONY__DATABASE__NAME",     value: "{{ refwd_secret.mysql_db_name }}" }
+    - { key: "SYMFONY__S3__KEY",            value: "{{ refwd_secret.s3_key }}" }
+    - { key: "SYMFONY__S3__SECRET",         value: "{{ refwd_secret.s3_secret }}" }
+    - { key: "SYMFONY__S3__BUCKET",         value: "{{ refwd_secret.s3_bucket }}" }
+    - { key: "SYMFONY__S3__ACP__OWNER",     value: "{{ refwd_secret.s3_acp_owner }}" }
+    - { key: "SYMFONY__DOMAIN__NAME",       value: "{{ refwd_hostname }}" }

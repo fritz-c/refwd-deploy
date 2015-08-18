@@ -1,0 +1,5 @@
+[group_refwd]
+127.0.0.1 refwd_ssl_cert=refwd-ssl-bundle.crt refwd_ssl_key=refwd-privatekey.pem
+
+[all:vars]
+inventory=production

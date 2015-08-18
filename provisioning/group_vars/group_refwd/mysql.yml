@@ -1,0 +1,14 @@
+---
+# Mysql
+mysql_databases:
+  - { name: "{{ refwd_secret.mysql_db_name }}", collation: utf8_general_ci, encoding: utf8 }
+
+mysql_users:
+  - name:     "{{ refwd_secret.mysql_symfony_user }}"
+    host:     127.0.0.1
+    password: "{{ refwd_secret.mysql_symfony_password }}"
+    priv:     "{{ refwd_secret.mysql_db_name }}.*:ALL"
+
+mysql_root_password: "{{ refwd_secret.mysql_root_password }}"
+
+mysql_slow_query_log_enabled: yes
